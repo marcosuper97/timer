@@ -1,8 +1,16 @@
 package com.example.timer
 
+import android.content.Context
+import android.content.pm.ActivityInfo
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import android.view.View.GONE
+import android.view.View.VISIBLE
 import android.widget.Toast
 import android.widget.Toast.LENGTH_LONG
 import androidx.activity.enableEdgeToEdge
@@ -26,10 +34,13 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+
         mainThreadHandler = Handler(Looper.getMainLooper())
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        binding.stop.visibility = GONE
 
         binding.startButton.setOnClickListener() {
             if (binding.editText.text.isEmpty()) {
@@ -38,6 +49,7 @@ class MainActivity : AppCompatActivity() {
                 val seconds: Int = binding.editText.text.toString().toInt()
                 mainThreadHandler?.post(startTimer(seconds))
                 binding.startButton.isEnabled = false
+                binding.stop.visibility = VISIBLE
             }
 
         }
@@ -63,17 +75,39 @@ class MainActivity : AppCompatActivity() {
             } else {
                 binding.timer.text = "00:00"
                 Toast.makeText(this, "Время вышло!", LENGTH_LONG).show()
+                vibrateDevice(this,100)
                 binding.startButton.isEnabled = true
+                binding.stop.visibility = GONE
             }
         }
     }
 
     private fun stopTimer(): Runnable {
         return Runnable {
-            binding.timer.text = "СОСАЛ?"
-            Toast.makeText(this, "Таймер сброшен", LENGTH_LONG).show()
+            binding.timer.text = "0:00"
             binding.startButton.isEnabled = true
+            binding.stop.visibility = GONE
+            Toast.makeText(this, "Таймер сброшен", LENGTH_LONG).show()
+            vibrateDevice(this,100)
             mainThreadHandler!!.removeCallbacksAndMessages(null)
+        }
+    }
+
+    private fun vibrateDevice(context: Context, durationMillis: Long) {
+        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            vibratorManager.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val vibrationEffect = VibrationEffect.createOneShot(durationMillis, VibrationEffect.DEFAULT_AMPLITUDE)
+            vibrator.vibrate(vibrationEffect)
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator.vibrate(durationMillis)
         }
     }
 
